@@ -85,34 +85,27 @@ add_action('init', 'secure_plugin_init');
 //handle the ajax request
 function secure_plugin_form_ajax()
 {
-    $isValid = true;
-    // wp_send_json($_POST);
     if (!isset($_REQUEST['nonce']) || !wp_verify_nonce($_REQUEST['nonce'], 'secure_plugin_nonce_ajax')) {
-        echo '<h3>Error: Invalid nonce</h3>';
-        $isValid = false;
+        wp_send_json_error('Invalid nonce');
     }
     //parse serialized data
     parse_str($_POST['formData'], $post);
 
     //check if name is string
     if (!is_string($post['name'])) {
-        echo '<h3>Error: Name must be a string</h3>';
-        $isValid = false;
+        wp_send_json_error('Name must be a string');
     }
 
     if (!is_email($post['email'])) {
-        echo '<h3>Error: Email must be a valid email address</h3>';
-        $isValid = false;
+        wp_send_json_error('Email must be a valid email address');
     }
 
     if (!is_numeric($post['age'])) {
-        echo '<h3>Error: Age must be a number</h3>';
-        $isValid = false;
+        wp_send_json_error('Age must be a number');
     }
 
     if (!is_string($post['message'])) {
-        echo '<h3>Error: Message must be a string</h3>';
-        $isValid = false;
+        wp_send_json_error('Message must be a string');
     }
 
 
@@ -122,12 +115,9 @@ function secure_plugin_form_ajax()
     $sanitized['age'] = intval($post['age']);
     $sanitized['message'] = sanitize_textarea_field($post['message']);
 
-    if ($isValid) {
-        //save to options table
-        update_option('secure_form_submission', $sanitized);
-    }
-    //send response
-    wp_send_json($post);
+    update_option('secure_form_submission', $sanitized);
+    //send success response
+    wp_send_json_success($sanitized);
 }
 
 add_action('wp_ajax_secure_plugin_form_action', 'secure_plugin_form_ajax');

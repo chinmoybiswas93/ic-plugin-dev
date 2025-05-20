@@ -15,8 +15,8 @@ global $wp;
 
 <form id="secure-plugin-form" method="post">
     <input type="text" id="name" name="name" placeholder="Your Name" required>
-    <input type="email" id="email" name="email" placeholder="Your Email" required>
-    <input type="number" id="age" name="age" placeholder="Your Age" required>
+    <input type="text" id="email" name="email" placeholder="Your Email" required>
+    <input type="text" id="age" name="age" placeholder="Your Age" required>
     <textarea id="message" name="message" placeholder="Your Message" required></textarea>
     <!-- <input type="hidden" name="redirect_url" value="<?php // echo home_url($wp->request); ?>"> -->
     <!-- <?php // wp_nonce_field('secure_plugin_nonce'); ?> -->

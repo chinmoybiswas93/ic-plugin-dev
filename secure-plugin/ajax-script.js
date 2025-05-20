@@ -14,21 +14,29 @@ jQuery(document).ready(function ($) {
         formData: $(this).serialize(),
       },
       success: function (response) {
-        $responseContainer.html(
-          "<h3>Form Submitted Successfully</h3>" +
-            "<p>Name: " +
-            $("<div>").text(response.name).html() +
-            "</p>" +
-            "<p>Email: " +
-            $("<div>").text(response.email).html() +
-            "</p>" +
-            "<p>Age: " +
-            $("<div>").text(response.age).html() +
-            "</p>" +
-            "<p>Message: " +
-            $("<div>").text(response.message).html() +
-            "</p>"
-        );
+        if (response.success) {
+          $responseContainer.html(
+            "<h3>Form Submitted Successfully</h3>" +
+              "<p>Name: " +
+              $("<div>").text(response.data.name).html() +
+              "</p>" +
+              "<p>Email: " +
+              $("<div>").text(response.data.email).html() +
+              "</p>" +
+              "<p>Age: " +
+              $("<div>").text(response.data.age).html() +
+              "</p>" +
+              "<p>Message: " +
+              $("<div>").text(response.data.message).html() +
+              "</p>"
+          );
+        } else {
+          $responseContainer.html(
+            '<div class="alert alert-danger"> <strong>Error:</strong> ' +
+              response.data +
+              "</div>"
+          );
+        }
       },
     });
   });
