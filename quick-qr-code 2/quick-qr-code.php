@@ -19,19 +19,13 @@ class QuickQRCode
         add_filter('the_content', array($this, 'append_qr_code'));
         //add the admin page 
         include_once plugin_dir_path(__FILE__) . 'includes/admin-settings.php';
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+
     }
 
     public function enqueue_scripts()
     {
         wp_enqueue_style('quick-qr-code', plugin_dir_url(__FILE__) . 'assets/css/style.css', [], time(), 'all');
         wp_enqueue_script('quick-qr-code', plugin_dir_url(__FILE__) . 'assets/js/script.js', ['jquery'], time(), true);
-    }
-
-    public function enqueue_admin_scripts()
-    {
-        wp_enqueue_style('quick-qr-code-admin', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], time(), 'all');
-        wp_enqueue_script('quick-qr-code-admin', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', ['jquery'], time(), true);
     }
 
     public function append_qr_code($content)

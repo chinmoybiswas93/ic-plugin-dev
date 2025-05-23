@@ -1,0 +1,27 @@
+#quick-qr-code-settings-form {
+  max-width: 500px;
+  margin-top: 20px;
+}
+
+button[type="submit"] {
+  background-color: #0073aa;
+  width: 100%;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#quick-qr-code-settings-form .form-group input,
+#quick-qr-code-settings-form .form-group select {
+  width: 100%;
+  padding: 5px 10px;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+#quick-qr-code-settings-form .form-group label {
+  display: block;
+  margin-bottom: 8px;
+}
