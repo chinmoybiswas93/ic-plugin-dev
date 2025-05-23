@@ -41,6 +41,22 @@ jQuery(document).ready(function ($) {
           form.before(errorHtml);
         }
       },
+      error: function (xhr) {
+        var dismissBtn =
+          '<button type="button" class="notice-dismiss"><span class="screen-reader-text">Dismiss this notice.</span></button>';
+        var errorMsg = "An unexpected error occurred.";
+        if (xhr.status === 403) {
+          errorMsg =
+            "Security check failed (invalid or expired nonce). Please reload the page and try again.";
+        }
+        form.before(
+          '<div class="notice notice-error is-dismissible" style="margin-top:20px;">' +
+            dismissBtn +
+            "<ul><li>" +
+            errorMsg +
+            "</li></ul></div>"
+        );
+      },
     });
 
     // Delegate click event for dynamically added notices

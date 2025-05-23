@@ -3,7 +3,6 @@ $settings = get_option('quick_qr_code_settings');
 ?>
 
 <form id="quick-qr-code-settings-form" method="post" action="#" autocomplete="off">
-    <?php wp_nonce_field('quick_qr_code_ajax_nonce', 'quick_qr_code_ajax_nonce_field'); ?>
     <div class="form-group">
         <label for="qr-code-label">QR Code Label</label>
         <input type="text" id="qr-code-label" name="qr-code-label" placeholder="QR Code Label"

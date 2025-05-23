@@ -6,9 +6,7 @@ class Admin_settings
     {
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
-        add_action('admin_post_quick_qr_code_settings', [$this, 'settings_save']);
         add_action('wp_ajax_quick_qr_code_save_settings', [$this, 'ajax_save_settings']);
-        // add_action('admin_notices', [$this, 'settings_notice']);
     }
 
     public function add_admin_menu()
@@ -45,7 +43,7 @@ class Admin_settings
         echo '<div class="wrap">';
         echo '<h1>Quick QR Code Settings</h1>';
         // Include the settings page HTML
-        include plugin_dir_path(__FILE__) . 'settings-page.php';
+        include plugin_dir_path(__FILE__) . 'template/form.php';
         echo '</div>';
     }
 
