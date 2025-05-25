@@ -30,6 +30,7 @@ class Admin_settings
         wp_localize_script('quick-qr-code-admin', 'QuickQRCodeAjax', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('quick_qr_code_ajax_nonce'),
+            'siteUrl' => site_url(),
         ]);
     }
 
@@ -41,7 +42,6 @@ class Admin_settings
         }
 
         echo '<div class="wrap">';
-        echo '<h1>Quick QR Code Settings</h1>';
         // Include the settings page HTML
         include plugin_dir_path(__FILE__) . 'template/form.php';
         echo '</div>';
