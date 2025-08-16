@@ -54,6 +54,7 @@ class DB_Demo
         add_action('admin_post_demo_db_submit', array($this, 'handle_add_person_submission'));
         add_action('admin_post_demo_db_edit', array($this, 'handle_edit_person_submission'));
         add_action('admin_post_demo_db_delete', array($this, 'handle_delete_person_submission'));
+        add_action('admin_post_demo_db_csv_import', array($this, 'handle_csv_import_submission'));
     }
 
     /**
@@ -283,6 +284,8 @@ class DB_Demo
             $this->render_add_person_form();
         }
 
+        $this->render_csv_import_form();
+
         $this->render_persons_list_table();
 
         echo '</div>';
@@ -310,6 +313,27 @@ class DB_Demo
                 break;
             case 'deleted':
                 $notice_text = __('Person deleted successfully!', 'db-demo');
+                break;
+            case 'csv_success':
+                $imported = intval($_GET['imported'] ?? 0);
+                $errors = intval($_GET['errors'] ?? 0);
+                if ($errors > 0) {
+                    $notice_text = sprintf(__('CSV imported successfully! %d records imported, %d errors.', 'db-demo'), $imported, $errors);
+                } else {
+                    $notice_text = sprintf(__('CSV imported successfully! %d records imported.', 'db-demo'), $imported);
+                }
+                break;
+            case 'csv_no_data':
+                $notice_class = 'notice notice-warning is-dismissible';
+                $notice_text = __('No valid data found in CSV file.', 'db-demo');
+                break;
+            case 'csv_error':
+                $notice_class = 'notice notice-error is-dismissible';
+                $notice_text = __('Error uploading CSV file. Please try again.', 'db-demo');
+                break;
+            case 'invalid_file':
+                $notice_class = 'notice notice-error is-dismissible';
+                $notice_text = __('Invalid file format. Please upload a CSV file.', 'db-demo');
                 break;
             case 'error':
                 $notice_class = 'notice notice-error is-dismissible';
@@ -431,6 +455,41 @@ class DB_Demo
                 </tr>
             </tbody>
         </table>
+        <?php
+    }
+
+    /**
+     * Render the CSV import form
+     */
+    private function render_csv_import_form()
+    {
+        ?>
+        <hr style="margin: 30px 0;">
+        <h2><?php esc_html_e('Import Persons from CSV', 'db-demo'); ?></h2>
+        <p><?php esc_html_e('Upload a CSV file with columns: Name, Email, Phone. Both comma-separated and semicolon-separated files are supported.', 'db-demo'); ?></p>
+        
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+            <table class="form-table">
+                <tbody>
+                    <tr>
+                        <th scope="row">
+                            <label for="csv_file"><?php esc_html_e('CSV File', 'db-demo'); ?></label>
+                        </th>
+                        <td>
+                            <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+                            <p class="description"><?php esc_html_e('Select a CSV file to import. File should have headers: Name, Email, Phone', 'db-demo'); ?></p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <?php wp_nonce_field('demo_db_csv_import_action', 'demo_db_csv_import_nonce'); ?>
+            <input type="hidden" name="action" value="demo_db_csv_import">
+            
+            <div class="db-demo-form-buttons">
+                <?php submit_button(__('Import CSV', 'db-demo'), 'primary', 'submit', false); ?>
+            </div>
+        </form>
         <?php
     }
 
@@ -588,6 +647,146 @@ class DB_Demo
 
         wp_safe_redirect(admin_url('admin.php?page=db-demo&message=' . $message));
         exit;
+    }
+
+    /**
+     * Handle CSV import form submission
+     */
+    public function handle_csv_import_submission()
+    {
+        if (!$this->verify_form_submission_security('demo_db_csv_import_nonce', 'demo_db_csv_import_action')) {
+            return;
+        }
+
+        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+            wp_safe_redirect(admin_url('admin.php?page=db-demo&message=csv_error'));
+            exit;
+        }
+
+        $file = $_FILES['csv_file'];
+        
+        // Validate file type
+        $file_info = pathinfo($file['name']);
+        if (strtolower($file_info['extension']) !== 'csv') {
+            wp_safe_redirect(admin_url('admin.php?page=db-demo&message=invalid_file'));
+            exit;
+        }
+
+        $result = $this->process_csv_import($file['tmp_name']);
+        
+        wp_safe_redirect(admin_url('admin.php?page=db-demo&message=' . $result['status'] . '&imported=' . $result['imported'] . '&errors=' . $result['errors']));
+        exit;
+    }
+
+    /**
+     * Process CSV import and return results
+     * 
+     * @param string $file_path
+     * @return array
+     */
+    private function process_csv_import($file_path)
+    {
+        $imported = 0;
+        $errors = 0;
+        
+        try {
+            // Read file content
+            $content = file_get_contents($file_path);
+            if ($content === false) {
+                return array('status' => 'error', 'imported' => 0, 'errors' => 1);
+            }
+
+            // Convert semicolon-separated to comma-separated if needed
+            $content = $this->convert_csv_separator($content);
+            
+            // Parse CSV
+            $lines = str_getcsv($content, "\n");
+            if (empty($lines)) {
+                return array('status' => 'error', 'imported' => 0, 'errors' => 1);
+            }
+
+            // Skip header row if it exists
+            $headers = str_getcsv(array_shift($lines));
+            if (empty($headers) || count($headers) < 2) {
+                return array('status' => 'error', 'imported' => 0, 'errors' => 1);
+            }
+
+            // Process each data row
+            foreach ($lines as $line) {
+                if (empty(trim($line))) {
+                    continue; // Skip empty lines
+                }
+                
+                $data = str_getcsv($line);
+                
+                // Ensure we have at least name and email
+                if (count($data) < 2) {
+                    $errors++;
+                    continue;
+                }
+
+                $person_data = array(
+                    'name' => sanitize_text_field($data[0] ?? ''),
+                    'email' => sanitize_email($data[1] ?? ''),
+                    'phone' => sanitize_text_field($data[2] ?? '')
+                );
+
+                // Validate data
+                if (empty($person_data['name']) || empty($person_data['email']) || !is_email($person_data['email'])) {
+                    $errors++;
+                    continue;
+                }
+
+                // Insert into database
+                $result = $this->insert_person_to_database($person_data);
+                if ($result !== false) {
+                    $imported++;
+                } else {
+                    $errors++;
+                }
+            }
+
+            $status = ($imported > 0) ? 'csv_success' : 'csv_no_data';
+            return array('status' => $status, 'imported' => $imported, 'errors' => $errors);
+
+        } catch (Exception $e) {
+            return array('status' => 'error', 'imported' => $imported, 'errors' => $errors + 1);
+        }
+    }
+
+    /**
+     * Convert semicolon-separated CSV to comma-separated
+     * 
+     * @param string $content
+     * @return string
+     */
+    private function convert_csv_separator($content)
+    {
+        // Check if the content has more semicolons than commas (indicating semicolon separation)
+        $semicolon_count = substr_count($content, ';');
+        $comma_count = substr_count($content, ',');
+        
+        // If there are significantly more semicolons than commas, convert them
+        if ($semicolon_count > $comma_count * 2) {
+            // Replace semicolons with commas, but be careful with quoted fields
+            $lines = explode("\n", $content);
+            $converted_lines = array();
+            
+            foreach ($lines as $line) {
+                if (empty(trim($line))) {
+                    $converted_lines[] = $line;
+                    continue;
+                }
+                
+                // Simple conversion: replace semicolons with commas
+                // This assumes no semicolons inside quoted fields
+                $converted_lines[] = str_replace(';', ',', $line);
+            }
+            
+            return implode("\n", $converted_lines);
+        }
+        
+        return $content;
     }
 
     // ========================================
