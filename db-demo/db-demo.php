@@ -260,6 +260,17 @@ class DB_Demo
             .db-demo-form-buttons .button {
                 margin: 0;
             }
+            .db-demo-csv-section {
+                background: #f9f9f9;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 20px;
+                margin: 20px 0;
+            }
+            .db-demo-csv-section h2 {
+                margin-top: 0;
+                color: #0073aa;
+            }
         ';
     }
 
@@ -465,31 +476,33 @@ class DB_Demo
     {
         ?>
         <hr style="margin: 30px 0;">
-        <h2><?php esc_html_e('Import Persons from CSV', 'db-demo'); ?></h2>
-        <p><?php esc_html_e('Upload a CSV file with columns: Name, Email, Phone. Both comma-separated and semicolon-separated files are supported.', 'db-demo'); ?></p>
-        
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
-            <table class="form-table">
-                <tbody>
-                    <tr>
-                        <th scope="row">
-                            <label for="csv_file"><?php esc_html_e('CSV File', 'db-demo'); ?></label>
-                        </th>
-                        <td>
-                            <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
-                            <p class="description"><?php esc_html_e('Select a CSV file to import. File should have headers: Name, Email, Phone', 'db-demo'); ?></p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="db-demo-csv-section">
+            <h2><?php esc_html_e('Import Persons from CSV', 'db-demo'); ?></h2>
+            <p><?php esc_html_e('Upload a CSV file with columns: Name, Email, Phone. Both comma-separated and semicolon-separated files are supported.', 'db-demo'); ?></p>
             
-            <?php wp_nonce_field('demo_db_csv_import_action', 'demo_db_csv_import_nonce'); ?>
-            <input type="hidden" name="action" value="demo_db_csv_import">
-            
-            <div class="db-demo-form-buttons">
-                <?php submit_button(__('Import CSV', 'db-demo'), 'primary', 'submit', false); ?>
-            </div>
-        </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+                <table class="form-table">
+                    <tbody>
+                        <tr>
+                            <th scope="row">
+                                <label for="csv_file"><?php esc_html_e('CSV File', 'db-demo'); ?></label>
+                            </th>
+                            <td>
+                                <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+                                <p class="description"><?php esc_html_e('Select a CSV file to import. File should have headers: Name, Email, Phone', 'db-demo'); ?></p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <?php wp_nonce_field('demo_db_csv_import_action', 'demo_db_csv_import_nonce'); ?>
+                <input type="hidden" name="action" value="demo_db_csv_import">
+                
+                <div class="db-demo-form-buttons">
+                    <?php submit_button(__('Import CSV', 'db-demo'), 'primary', 'submit', false); ?>
+                </div>
+            </form>
+        </div>
         <?php
     }
 
@@ -768,7 +781,7 @@ class DB_Demo
         
         // If there are significantly more semicolons than commas, convert them
         if ($semicolon_count > $comma_count * 2) {
-            // Replace semicolons with commas, but be careful with quoted fields
+            // Better conversion that handles quoted fields
             $lines = explode("\n", $content);
             $converted_lines = array();
             
@@ -778,8 +791,27 @@ class DB_Demo
                     continue;
                 }
                 
-                // Simple conversion: replace semicolons with commas
-                // This assumes no semicolons inside quoted fields
+                // Try to parse with semicolon delimiter first
+                $handle = fopen("data://text/plain," . $line, "r");
+                if ($handle !== false) {
+                    $data = fgetcsv($handle, 0, ';');
+                    fclose($handle);
+                    
+                    if ($data !== false && count($data) > 1) {
+                        // Convert back to CSV with commas, properly quoted
+                        $quoted_data = array_map(function($field) {
+                            // Quote fields that contain commas, quotes, or newlines
+                            if (strpos($field, ',') !== false || strpos($field, '"') !== false || strpos($field, "\n") !== false) {
+                                return '"' . str_replace('"', '""', $field) . '"';
+                            }
+                            return $field;
+                        }, $data);
+                        $converted_lines[] = implode(',', $quoted_data);
+                        continue;
+                    }
+                }
+                
+                // Fallback to simple replacement if parsing fails
                 $converted_lines[] = str_replace(';', ',', $line);
             }
             
